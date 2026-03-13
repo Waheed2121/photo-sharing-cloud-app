@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Sharing | Creator View</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo">Cloud Gallery</div>
+        <nav>
+            <a href="/index.html">Browse</a>
+            <a href="/creator.html" class="active">Upload</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section class="auth-bar">
+            <div id="authSummary" class="auth-summary"></div>
+            <div id="authActions"></div>
+        </section>
+
+        <section class="upload-section">
+            <div class="card glass-card upload-card">
+                <h2>Upload a Photo</h2>
+                <p>Share your moments with the world.</p>
+                <div id="creatorNotice" class="status-msg"></div>
+                <form id="uploadForm" class="form-group" enctype="multipart/form-data">
+                    <div class="input-field">
+                        <label for="title">Title</label>
+                        <input type="text" id="title" name="title" placeholder="A stunning sunset" required>
+                    </div>
+                    
+                    <div class="input-field">
+                        <label for="caption">Caption</label>
+                        <textarea id="caption" name="caption" placeholder="Describe the photo..." required></textarea>
+                    </div>
+
+                    <div class="input-row">
+                        <div class="input-field">
+                            <label for="location">Location</label>
+                            <input type="text" id="location" name="location" placeholder="e.g. Paris, France">
+                        </div>
+                        <div class="input-field">
+                            <label for="people">People Present</label>
+                            <input type="text" id="people" name="people" placeholder="John, Jane">
+                        </div>
+                    </div>
+
+                    <div class="input-field file-input">
+                        <label for="image" class="file-label">Choose an Image</label>
+                        <input type="file" id="image" name="image" accept="image/jpeg,image/png" required>
+                        <small class="field-hint">Accepted formats: JPEG or PNG, maximum 5 MB.</small>
+                    </div>
+
+                    <button type="submit" class="btn primary-btn">Upload to Server</button>
+                    <div id="uploadStatus" class="status-msg"></div>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script src="/script.js"></script>
+</body>
+</html>

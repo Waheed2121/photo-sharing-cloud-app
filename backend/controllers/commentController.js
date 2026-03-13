@@ -1,11 +1,15 @@
 const pool = require("../config/db")
+const { getCache, setCache, invalidateByPrefix } = require("../utils/cache")
 
 exports.addComment = async (req, res) => {
     try {
-        const { image_id, user_id, comment } = req.body || {}
+        const { image_id, comment } = req.body || {}
+        const user_id = req.user && req.user.id
 
         if (!image_id || !user_id || !comment) {
-            return res.status(400).json({ error: "Missing required fields or invalid JSON body. Make sure to send a raw JSON body in Postman." })
+            return res.status(400).json({
+                error: "image_id and comment are required in the JSON body"
+            })
         }
 
         const result = await pool.query(
@@ -19,6 +23,8 @@ exports.addComment = async (req, res) => {
             message: "Comment added successfully",
             comment: result.rows[0]
         })
+        invalidateByPrefix(`comments:image:${image_id}:`)
+        invalidateByPrefix("images:")
 
     } catch (error) {
         console.error(error)
@@ -30,14 +36,22 @@ exports.getCommentsByImage = async (req, res) => {
     const { imageId } = req.params
 
     try {
+        const cacheKey = `comments:image:${imageId}`
+        const cached = getCache(cacheKey)
+        if (cached) {
+            return res.json(cached)
+        }
+
         const result = await pool.query(
             "SELECT * FROM comments WHERE image_id = $1 ORDER BY created_at DESC",
             [imageId]
         )
 
-        res.json({
+        const payload = {
             comments: result.rows
-        })
+        }
+        setCache(cacheKey, payload)
+        res.json(payload)
 
     } catch (error) {
         console.error(error)
