@@ -26,4 +26,12 @@ router.post(
     imageController.uploadImage
 )
 
+// DELETE /api/images/:id — JWT required, role must be "creator"
+router.delete(
+    "/:id",
+    authenticate,
+    authorize("creator"),
+    imageController.deleteImage
+)
+
 module.exports = router

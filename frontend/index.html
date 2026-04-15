@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Gallery</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="home">
+    <header class="topbar">
+        <a class="brand" href="/index.html">
+            <span class="brand-mark">◉</span>
+            <span>Cloud Gallery</span>
+        </a>
+
+        <nav class="topbar-links">
+            <a href="/gallery.html" data-nav="gallery">Gallery</a>
+            <a href="/dashboard.html" data-nav="dashboard" data-admin-only="true" class="hidden">Dashboard</a>
+        </nav>
+
+        <div class="topbar-actions">
+            <button id="themeToggle" class="btn btn-ghost" type="button">Dark mode</button>
+            <button id="logoutButton" class="btn btn-ghost hidden" type="button">Logout</button>
+        </div>
+    </header>
+
+    <main class="page-shell hero-shell">
+        <section class="hero-card center-stack">
+            <span class="eyebrow">Photo sharing platform</span>
+            <h1>Share and discover beautiful moments.</h1>
+            <p>
+                A clean cloud photo app for browsing, rating, commenting, and managing image uploads.
+            </p>
+
+            <div class="button-row">
+                <a class="btn btn-primary" href="/login.html">Login</a>
+                <a class="btn btn-secondary" href="/register.html">Register</a>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer-bar">Developed by Waheed Saeed</footer>
+
+    <script src="/script.js"></script>
+</body>
+</html>

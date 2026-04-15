@@ -1,5 +1,4 @@
--- USERS TABLE
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
@@ -7,8 +6,7 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- IMAGES TABLE
-CREATE TABLE images (
+CREATE TABLE IF NOT EXISTS images (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255),
     caption TEXT,
@@ -19,8 +17,7 @@ CREATE TABLE images (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- COMMENTS TABLE
-CREATE TABLE comments (
+CREATE TABLE IF NOT EXISTS comments (
     id SERIAL PRIMARY KEY,
     image_id INTEGER REFERENCES images(id),
     user_id INTEGER REFERENCES users(id),
@@ -28,8 +25,7 @@ CREATE TABLE comments (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- RATINGS TABLE
-CREATE TABLE ratings (
+CREATE TABLE IF NOT EXISTS ratings (
     id SERIAL PRIMARY KEY,
     image_id INTEGER REFERENCES images(id),
     user_id INTEGER REFERENCES users(id),
@@ -37,11 +33,8 @@ CREATE TABLE ratings (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- LIKES TABLE
-CREATE TABLE likes (
-    id SERIAL PRIMARY KEY,
-    image_id INTEGER REFERENCES images(id) ON DELETE CASCADE,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (image_id, user_id)
-);
+CREATE INDEX IF NOT EXISTS idx_images_created_at ON images(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_images_title ON images(title);
+CREATE INDEX IF NOT EXISTS idx_images_location ON images(location);
+CREATE INDEX IF NOT EXISTS idx_comments_image_id ON comments(image_id);
+CREATE INDEX IF NOT EXISTS idx_ratings_image_id ON ratings(image_id);

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | Cloud Gallery</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="register">
+    <header class="topbar">
+        <a class="brand" href="/index.html">
+            <span class="brand-mark">◉</span>
+            <span>Cloud Gallery</span>
+        </a>
+
+        <nav class="topbar-links">
+            <a href="/gallery.html" data-nav="gallery">Gallery</a>
+            <a href="/dashboard.html" data-nav="dashboard" data-admin-only="true" class="hidden">Dashboard</a>
+        </nav>
+
+        <div class="topbar-actions">
+            <button id="themeToggle" class="btn btn-ghost" type="button">Dark mode</button>
+            <button id="logoutButton" class="btn btn-ghost hidden" type="button">Logout</button>
+        </div>
+    </header>
+
+    <main class="page-shell auth-shell">
+        <section class="auth-card">
+            <span class="eyebrow">Join the gallery</span>
+            <h1>Register</h1>
+            <p>Create a consumer account to browse and interact with photos.</p>
+
+            <form id="registerForm" class="stack-form">
+                <label class="field">
+                    <span>Email</span>
+                    <input type="email" name="email" placeholder="you@example.com" required>
+                </label>
+
+                <label class="field">
+                    <span>Password</span>
+                    <input type="password" name="password" placeholder="Choose a password" required>
+                </label>
+
+                <button type="submit" class="btn btn-primary">Register</button>
+                <div id="registerStatus" class="status-text"></div>
+            </form>
+
+            <p class="switch-text">Already registered? <a href="/login.html">Login</a></p>
+        </section>
+    </main>
+
+    <script src="/script.js"></script>
+</body>
+</html>

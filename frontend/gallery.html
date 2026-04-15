@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery | Cloud Gallery</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="gallery">
+    <header class="topbar">
+        <a class="brand" href="/index.html">
+            <span class="brand-mark">◉</span>
+            <span>Cloud Gallery</span>
+        </a>
+
+        <nav class="topbar-links">
+            <a href="/gallery.html" data-nav="gallery">Gallery</a>
+            <a href="/dashboard.html" data-nav="dashboard" data-admin-only="true" class="hidden">Dashboard</a>
+        </nav>
+
+        <div class="topbar-actions">
+            <button id="themeToggle" class="btn btn-ghost" type="button">Dark mode</button>
+            <button id="logoutButton" class="btn btn-ghost hidden" type="button">Logout</button>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="page-header">
+            <div>
+                <span class="eyebrow">Gallery</span>
+                <h1>Explore all photos</h1>
+                <p>View images, comment, rate, and like your favorites.</p>
+            </div>
+
+            <form id="searchForm" class="search-bar">
+                <input type="text" name="q" placeholder="Search by title, caption, or location">
+                <button type="submit" class="btn btn-primary">Search</button>
+                <button type="button" id="clearSearch" class="btn btn-secondary">Clear</button>
+            </form>
+        </section>
+
+        <div id="galleryStatus" class="status-text"></div>
+        <section id="galleryGrid" class="card-grid"></section>
+        <section id="pagination" class="pagination"></section>
+    </main>
+
+    <script src="/script.js"></script>
+</body>
+</html>

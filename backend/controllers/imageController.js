@@ -1,6 +1,51 @@
 const pool = require("../config/db")
 const { resolveImageUrl } = require("../services/imageStorage")
 const { getCache, setCache, invalidateByPrefix } = require("../utils/cache")
+const fs = require("fs/promises")
+const path = require("path")
+
+const IMAGE_SELECT = `
+    SELECT
+        i.id,
+        i.title,
+        i.caption,
+        i.location,
+        i.people_present,
+        i.image_url,
+        i.created_at,
+        u.email AS uploader,
+        r.average_rating AS average_rating,
+        COALESCE(l.like_count, 0)::int AS like_count,
+        COALESCE(c.comments, '[]'::json) AS comments
+    FROM images i
+    LEFT JOIN users u ON u.id = i.creator_id
+    LEFT JOIN LATERAL (
+        SELECT AVG(rt.rating)::numeric(10,2) AS average_rating
+        FROM ratings rt
+        WHERE rt.image_id = i.id
+    ) r ON true
+    LEFT JOIN LATERAL (
+        SELECT COUNT(*)::int AS like_count
+        FROM likes lk
+        WHERE lk.image_id = i.id
+    ) l ON true
+    LEFT JOIN LATERAL (
+        SELECT json_agg(
+            json_build_object(
+                'id', cm.id,
+                'user_id', cm.user_id,
+                'user_email', cu.email,
+                'user_role', cu.role,
+                'comment', cm.comment,
+                'created_at', cm.created_at
+            )
+            ORDER BY cm.created_at DESC
+        ) AS comments
+        FROM comments cm
+        LEFT JOIN users cu ON cu.id = cm.user_id
+        WHERE cm.image_id = i.id
+    ) c ON true
+`
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
@@ -61,9 +106,58 @@ exports.uploadImage = async (req, res) => {
         invalidateByPrefix("images:")
         invalidateByPrefix("comments:")
         invalidateByPrefix("ratings:")
+        invalidateByPrefix("likes:")
     } catch (error) {
         console.error(error)
         res.status(500).json({ error: "Upload failed: " + error.message })
+    }
+}
+
+/**
+ * DELETE /api/images/:id
+ * Requires: authenticate + authorize("creator")
+ */
+exports.deleteImage = async (req, res) => {
+    const { id } = req.params
+
+    const client = await pool.connect()
+    try {
+        const imageResult = await client.query(
+            "SELECT id, image_url FROM images WHERE id = $1",
+            [id]
+        )
+
+        if (imageResult.rows.length === 0) {
+            return res.status(404).json({ error: "Image not found" })
+        }
+
+        await client.query("BEGIN")
+        await client.query("DELETE FROM likes WHERE image_id = $1", [id])
+        await client.query("DELETE FROM ratings WHERE image_id = $1", [id])
+        await client.query("DELETE FROM comments WHERE image_id = $1", [id])
+        await client.query("DELETE FROM images WHERE id = $1", [id])
+        await client.query("COMMIT")
+
+        const imageUrl = imageResult.rows[0].image_url || ""
+        const localPrefix = `${process.env.BACKEND_URL || "http://localhost:3000"}/uploads/`
+        if (imageUrl.startsWith(localPrefix)) {
+            const fileName = path.basename(imageUrl)
+            const filePath = path.join(__dirname, "..", "uploads", fileName)
+            await fs.unlink(filePath).catch(() => {})
+        }
+
+        invalidateByPrefix("images:")
+        invalidateByPrefix("comments:")
+        invalidateByPrefix("ratings:")
+        invalidateByPrefix("likes:")
+
+        return res.json({ message: "Image deleted successfully" })
+    } catch (error) {
+        await client.query("ROLLBACK").catch(() => {})
+        console.error(error)
+        return res.status(500).json({ error: "Delete failed" })
+    } finally {
+        client.release()
     }
 }
 
@@ -85,37 +179,7 @@ exports.getImages = async (req, res) => {
         const total = parseInt(countResult.rows[0].count)
 
         const result = await pool.query(
-            `SELECT
-                i.id,
-                i.title,
-                i.caption,
-                i.location,
-                i.people_present,
-                i.image_url,
-                i.created_at,
-                u.email AS uploader,
-                r.average_rating AS average_rating,
-                COALESCE(c.comments, '[]'::json) AS comments
-             FROM images i
-             LEFT JOIN users u ON u.id = i.creator_id
-             LEFT JOIN LATERAL (
-                 SELECT AVG(rt.rating)::numeric(10,2) AS average_rating
-                 FROM ratings rt
-                 WHERE rt.image_id = i.id
-             ) r ON true
-             LEFT JOIN LATERAL (
-                 SELECT json_agg(
-                     json_build_object(
-                         'id', cm.id,
-                         'user_id', cm.user_id,
-                         'comment', cm.comment,
-                         'created_at', cm.created_at
-                     )
-                     ORDER BY cm.created_at DESC
-                 ) AS comments
-                 FROM comments cm
-                 WHERE cm.image_id = i.id
-             ) c ON true
+            `${IMAGE_SELECT}
              ORDER BY i.created_at DESC
              LIMIT $1 OFFSET $2`,
             [limit, offset]
@@ -168,37 +232,7 @@ exports.searchImages = async (req, res) => {
         const total = parseInt(countResult.rows[0].count)
 
         const result = await pool.query(
-            `SELECT
-                i.id,
-                i.title,
-                i.caption,
-                i.location,
-                i.people_present,
-                i.image_url,
-                i.created_at,
-                u.email AS uploader,
-                r.average_rating AS average_rating,
-                COALESCE(c.comments, '[]'::json) AS comments
-             FROM images i
-             LEFT JOIN users u ON u.id = i.creator_id
-             LEFT JOIN LATERAL (
-                 SELECT AVG(rt.rating)::numeric(10,2) AS average_rating
-                 FROM ratings rt
-                 WHERE rt.image_id = i.id
-             ) r ON true
-             LEFT JOIN LATERAL (
-                 SELECT json_agg(
-                     json_build_object(
-                         'id', cm.id,
-                         'user_id', cm.user_id,
-                         'comment', cm.comment,
-                         'created_at', cm.created_at
-                     )
-                     ORDER BY cm.created_at DESC
-                 ) AS comments
-                 FROM comments cm
-                 WHERE cm.image_id = i.id
-             ) c ON true
+            `${IMAGE_SELECT}
              ${WHERE}
              ORDER BY i.created_at DESC
              LIMIT $2 OFFSET $3`,

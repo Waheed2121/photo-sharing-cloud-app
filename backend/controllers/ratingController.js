@@ -47,7 +47,18 @@ exports.getRatingsByImage = async (req, res) => {
         }
 
         const result = await pool.query(
-            "SELECT * FROM ratings WHERE image_id = $1",
+            `SELECT
+                r.id,
+                r.image_id,
+                r.user_id,
+                r.rating,
+                r.created_at,
+                u.email AS user_email,
+                u.role AS user_role
+             FROM ratings r
+             LEFT JOIN users u ON u.id = r.user_id
+             WHERE r.image_id = $1
+             ORDER BY r.created_at DESC`,
             [imageId]
         )
 

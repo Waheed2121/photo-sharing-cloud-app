@@ -1,60 +1,35 @@
-# Cloud Photo Sharing Platform
+Photo Sharing Cloud Application - Task 1
 
-Node.js + Express photo sharing web application for a cloud computing assignment.
+This project implements Task 1 for a cloud-native photo sharing platform.
 
-## Architecture
+Implemented requirements:
+- Creator account can upload images with metadata (`title`, `caption`, `location`, `people`).
+- Consumer account can browse/search images, comment on images, and rate images.
+- Search endpoint: `GET /api/images/search?q=...` (PostgreSQL `ILIKE` on title/caption/location).
+- Gallery pagination: `GET /api/images?page=1&limit=10`.
+- Upload validation: JPEG/PNG only, max size 5MB.
+- JWT authentication with role-based authorization.
+- User persistence in PostgreSQL (`users` table), not in memory.
+- Basic API response caching added for gallery/search/comments/ratings to support scalability.
 
-- Frontend: HTML, CSS, JavaScript (`backend/public`)
-- Backend: Node.js, Express (`backend`)
-- Database: Azure Database for PostgreSQL
-- Storage: Azure Blob Storage
-- Hosting: Azure App Service
+Roles:
+- Public registration creates `consumer` users only.
+- `creator` users are enrolled directly in the database (no public creator enrollment page).
 
-## Features
+Create a creator user manually:
+1. Generate a bcrypt hash for a password.
+2. Insert into PostgreSQL:
 
-- Register and login (JWT authentication)
-- Creator-only image upload
-- Gallery view
-- Search (title, caption, location)
-- Pagination
-- Comments
-- Ratings
-
-## Run Locally
-
-1. Create environment file:
-   - Copy `backend/.env.example` to `backend/.env`
-   - Fill in required values
-2. Install dependencies:
-
-```bash
-cd backend
-npm install
+```sql
+INSERT INTO users (email, password_hash, role)
+VALUES ('creator@example.com', '<bcrypt_hash>', 'creator');
 ```
 
-3. Start server:
+Run backend:
+1. Configure `backend/.env`.
+2. Install dependencies in `backend`.
+3. Start server and open `http://localhost:3000/`.
 
-```bash
-npm start
-```
-
-4. Open:
-   - `http://localhost:3000/welcome.html`
-
-## API Endpoints
-
-- `POST /api/auth/register` - Register consumer user
-- `POST /api/auth/login` - Login and return JWT
-- `GET /api/images?page=&limit=` - Get gallery (auth required)
-- `GET /api/images/search?q=&page=&limit=` - Search images (auth required)
-- `POST /api/images/upload` - Upload image (creator role, multipart/form-data)
-- `POST /api/comments` - Add comment (auth required)
-- `GET /api/comments/:imageId` - Get comments for image (auth required)
-- `POST /api/ratings` - Add rating (auth required)
-- `GET /api/ratings/:imageId` - Get ratings for image (auth required)
-- `GET /health` - Health check
-
-## Notes
-
-- `backend/uploads` is kept empty in the repository for submission.
-- Uploaded files are stored in Azure Blob Storage in cloud deployment.
+/Notes on "ideal" Task 1 items:
+- Caching is implemented in-app (short TTL cache).
+- Dynamic DNS routing is deployment-level and is configured on the cloud platform during Task 2 deployment.

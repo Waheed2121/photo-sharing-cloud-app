@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Cloud Gallery</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="dashboard">
+    <header class="topbar">
+        <a class="brand" href="/index.html">
+            <span class="brand-mark">◉</span>
+            <span>Cloud Gallery</span>
+        </a>
+
+        <nav class="topbar-links">
+            <a href="/gallery.html" data-nav="gallery">Gallery</a>
+            <a href="/dashboard.html" data-nav="dashboard" data-admin-only="true" class="hidden">Dashboard</a>
+        </nav>
+
+        <div class="topbar-actions">
+            <button id="themeToggle" class="btn btn-ghost" type="button">Dark mode</button>
+            <button id="logoutButton" class="btn btn-ghost hidden" type="button">Logout</button>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="page-header">
+            <div>
+                <span class="eyebrow">Admin dashboard</span>
+                <h1>Manage uploads</h1>
+                <p>Upload new photos and delete any image from the gallery.</p>
+            </div>
+        </section>
+
+        <section class="dashboard-layout">
+            <article class="panel-card">
+                <h2>Upload photo</h2>
+                <p>Add a new image with title, caption, location, and people.</p>
+
+                <form id="uploadForm" class="stack-form" enctype="multipart/form-data">
+                    <label class="field">
+                        <span>Title</span>
+                        <input type="text" name="title" placeholder="A stunning sunset" required>
+                    </label>
+
+                    <label class="field">
+                        <span>Caption</span>
+                        <textarea name="caption" rows="4" placeholder="Describe the photo..." required></textarea>
+                    </label>
+
+                    <div class="split-fields">
+                        <label class="field">
+                            <span>Location</span>
+                            <input type="text" name="location" placeholder="e.g. Paris, France">
+                        </label>
+                        <label class="field">
+                            <span>People</span>
+                            <input type="text" name="people" placeholder="John, Jane">
+                        </label>
+                    </div>
+
+                    <label class="field">
+                        <span>Image</span>
+                        <input type="file" name="image" accept="image/jpeg,image/png" required>
+                        <small class="hint-text">JPEG or PNG only. Maximum size 5 MB.</small>
+                    </label>
+
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                    <div id="uploadStatus" class="status-text"></div>
+                </form>
+            </article>
+
+            <article class="panel-card panel-card-wide">
+                <h2>All images</h2>
+                <p>Delete any photo from the gallery.</p>
+                <div id="dashboardStatus" class="status-text"></div>
+                <section id="galleryGrid" class="card-grid"></section>
+                <section id="pagination" class="pagination"></section>
+            </article>
+        </section>
+    </main>
+
+    <script src="/script.js"></script>
+</body>
+</html>

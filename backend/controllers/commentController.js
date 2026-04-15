@@ -43,7 +43,18 @@ exports.getCommentsByImage = async (req, res) => {
         }
 
         const result = await pool.query(
-            "SELECT * FROM comments WHERE image_id = $1 ORDER BY created_at DESC",
+            `SELECT
+                c.id,
+                c.image_id,
+                c.user_id,
+                c.comment,
+                c.created_at,
+                u.email AS user_email,
+                u.role AS user_role
+             FROM comments c
+             LEFT JOIN users u ON u.id = c.user_id
+             WHERE c.image_id = $1
+             ORDER BY c.created_at DESC`,
             [imageId]
         )
 
