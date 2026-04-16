@@ -134,6 +134,32 @@ async function ensureDatabaseSchema() {
             UNIQUE (image_id, user_id)
         )
     `)
+
+    try {
+        await pool.query(`
+            DELETE FROM ratings 
+            WHERE id IN (
+                SELECT id FROM (
+                    SELECT id, ROW_NUMBER() OVER(PARTITION BY image_id, user_id ORDER BY created_at DESC) as row_num
+                    FROM ratings
+                ) t WHERE t.row_num > 1
+            )
+        `);
+        await pool.query(`ALTER TABLE ratings ADD CONSTRAINT unique_user_image_rating UNIQUE (image_id, user_id)`);
+    } catch(e) {}
+    
+    try {
+        await pool.query(`
+            DELETE FROM likes 
+            WHERE id IN (
+                SELECT id FROM (
+                    SELECT id, ROW_NUMBER() OVER(PARTITION BY image_id, user_id ORDER BY created_at DESC) as row_num
+                    FROM likes
+                ) t WHERE t.row_num > 1
+            )
+        `);
+        await pool.query(`ALTER TABLE likes ADD CONSTRAINT unique_user_image_like UNIQUE (image_id, user_id)`);
+    } catch(e) {}
 }
 
 async function seedRequiredUsers() {
