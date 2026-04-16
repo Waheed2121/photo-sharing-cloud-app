@@ -48,7 +48,7 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"]
 }))
 app.use(express.json())
-app.use(express.static(path.join(__dirname, "../frontend")))
+app.use(express.static(path.join(__dirname, "frontend")))
 
 app.use("/api/auth", authRoutes)
 app.use("/api/images", imageRoutes)
@@ -67,7 +67,7 @@ app.delete("/image/:id", authenticate, authorize("creator"), imageController.del
 app.use("/uploads", express.static(uploadsDir))
 
 app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend/index.html"))
+    res.sendFile(path.join(__dirname, "frontend/index.html"))
 })
 
 app.get("/health", (req, res) => {
@@ -75,7 +75,7 @@ app.get("/health", (req, res) => {
 })
 
 app.use((req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend/index.html"))
+    res.sendFile(path.join(__dirname, "frontend/index.html"))
 })
 
 const PORT = process.env.PORT || 3000
