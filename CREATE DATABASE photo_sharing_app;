@@ -1,1 +1,0 @@
-CREATE DATABASE photo_sharing_app;

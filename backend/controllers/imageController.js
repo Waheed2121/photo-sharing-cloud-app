@@ -11,7 +11,7 @@ const IMAGE_SELECT = `
         i.caption,
         i.location,
         i.people_present,
-        i.image_url,
+        COALESCE(NULLIF(BTRIM(i.image_url), ''), '') AS image_url,
         i.created_at,
         u.email AS uploader,
         r.average_rating AS average_rating,
@@ -69,6 +69,18 @@ function paginationMeta(total, page, limit) {
         page,
         limit,
         totalPages: Math.ceil(total / limit)
+    }
+}
+
+function normalizeImageRow(row) {
+    const imageUrl = row && typeof row.image_url === "string" ? row.image_url.trim() : ""
+    const fallbackUrl = "https://source.unsplash.com/800x600/?nature,landscape"
+    const resolvedUrl = imageUrl || fallbackUrl
+    return {
+        ...row,
+        image_url: resolvedUrl,
+        url: resolvedUrl,
+        imageUrl: resolvedUrl
     }
 }
 
@@ -186,7 +198,7 @@ exports.getImages = async (req, res) => {
         )
 
         const payload = {
-            images: result.rows,
+            images: result.rows.map(normalizeImageRow),
             pagination: paginationMeta(total, page, limit)
         }
         setCache(cacheKey, payload)
@@ -240,7 +252,7 @@ exports.searchImages = async (req, res) => {
         )
 
         const payload = {
-            images: result.rows,
+            images: result.rows.map(normalizeImageRow),
             pagination: paginationMeta(total, page, limit)
         }
         setCache(cacheKey, payload)

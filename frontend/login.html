@@ -27,13 +27,12 @@
         </div>
     </header>
 
-    <main class="page-shell auth-shell">
-        <section class="auth-card">
-            <span class="eyebrow">Welcome back</span>
+    <main class="page-shell auth-page">
+        <section class="auth-center-card hero-card">
+            <span class="eyebrow">Account access</span>
             <h1>Login</h1>
-            <p>Sign in to view images, comment, rate, and like photos.</p>
 
-            <form id="loginForm" class="stack-form">
+            <form id="loginForm" class="stack-form auth-form">
                 <label class="field">
                     <span>Email</span>
                     <input type="email" name="email" placeholder="you@example.com" required>
@@ -41,14 +40,14 @@
 
                 <label class="field">
                     <span>Password</span>
-                    <input type="password" name="password" placeholder="Your password" required>
+                    <input type="password" name="password" placeholder="Enter your password" required>
                 </label>
 
-                <button type="submit" class="btn btn-primary">Login</button>
+                <button type="submit" class="btn btn-primary auth-submit">Login</button>
                 <div id="loginStatus" class="status-text"></div>
             </form>
 
-            <p class="switch-text">Need an account? <a href="/register.html">Register</a></p>
+            <p class="switch-text auth-switch">Need an account? <a href="/register.html">Create one</a></p>
         </section>
     </main>
 

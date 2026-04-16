@@ -6,5 +6,6 @@ const { authenticate, authorize } = require("../middleware/authMiddleware")
 
 router.post("/", authenticate, authorize("consumer", "creator"), likeController.addLike)
 router.get("/:imageId", authenticate, authorize("consumer", "creator"), likeController.getLikesByImage)
+router.delete("/:imageId", authenticate, authorize("consumer", "creator"), likeController.removeLike)
 
 module.exports = router

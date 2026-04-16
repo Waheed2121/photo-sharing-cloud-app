@@ -23,7 +23,7 @@ exports.addComment = async (req, res) => {
             message: "Comment added successfully",
             comment: result.rows[0]
         })
-        invalidateByPrefix(`comments:image:${image_id}:`)
+        invalidateByPrefix(`comments:image:${image_id}`)
         invalidateByPrefix("images:")
 
     } catch (error) {

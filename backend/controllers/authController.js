@@ -12,14 +12,15 @@ if (!JWT_SECRET) {
 exports.register = async (req, res) => {
     try {
         const { email, password } = req.body
+        const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : ""
 
-        if (!email || !password) {
+        if (!normalizedEmail || !password) {
             return res.status(400).json({ error: "Email and password are required" })
         }
 
         const existingUser = await pool.query(
-            "SELECT id FROM users WHERE email = $1",
-            [email]
+            "SELECT id FROM users WHERE LOWER(email) = LOWER($1)",
+            [normalizedEmail]
         )
         if (existingUser.rows.length > 0) {
             return res.status(409).json({ error: "User already exists" })
@@ -30,7 +31,7 @@ exports.register = async (req, res) => {
             `INSERT INTO users (email, password_hash, role)
              VALUES ($1, $2, $3)
              RETURNING id, email, role`,
-            [email, passwordHash, PUBLIC_ROLE]
+            [normalizedEmail, passwordHash, PUBLIC_ROLE]
         )
         const user = created.rows[0]
 
@@ -49,24 +50,27 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body
+        const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : ""
 
-        if (!email || !password) {
+        if (!normalizedEmail || !password) {
             return res.status(400).json({ error: "Email and password are required" })
         }
 
         const result = await pool.query(
-            "SELECT id, email, password_hash, role FROM users WHERE email = $1",
-            [email]
+            "SELECT id, email, password_hash, role FROM users WHERE LOWER(email) = LOWER($1)",
+            [normalizedEmail]
         )
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: "User not found" })
+            return res.status(401).json({ error: "Invalid email or password" })
         }
         const user = result.rows[0]
 
-        const validPassword = await bcrypt.compare(password, user.password_hash)
+        const validPassword = user.password_hash
+            ? await bcrypt.compare(password, user.password_hash)
+            : false
 
         if (!validPassword) {
-            return res.status(401).json({ error: "Invalid password" })
+            return res.status(401).json({ error: "Invalid email or password" })
         }
 
         const token = jwt.sign(

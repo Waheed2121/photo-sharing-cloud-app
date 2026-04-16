@@ -1,11 +1,12 @@
-const API = "https://photo-sharing-gzc9gra4eefjaxhv.francecentral-01.azurewebsites.net/api"
+const API = "/api"
 const TOKEN_KEY = "cloudGalleryToken"
 const USER_KEY = "cloudGalleryUser"
 const THEME_KEY = "cloudGalleryTheme"
-const PAGE_SIZE = 6
 
-let currentPage = 1
-let currentQuery = ""
+const galleryState = {
+    activeImageId: null,
+    images: []
+}
 
 function getToken() {
     return localStorage.getItem(TOKEN_KEY)
@@ -61,6 +62,10 @@ async function apiFetch(url, options = {}) {
 
     if (response.status === 401) {
         clearSession()
+        const page = document.body.dataset.page
+        if (page !== "login" && page !== "register") {
+            window.location.href = "/login.html"
+        }
     }
 
     return response
@@ -78,9 +83,16 @@ function setStatus(element, message, type = "") {
 function applyTheme() {
     const theme = localStorage.getItem(THEME_KEY) || "light"
     document.body.classList.toggle("dark-mode", theme === "dark")
+    document.documentElement.setAttribute("data-theme", theme)
     const toggle = document.getElementById("themeToggle")
     if (toggle) {
-        toggle.textContent = theme === "dark" ? "Light mode" : "Dark mode"
+        const label = toggle.querySelector("#themeLabel")
+        const text = theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode"
+        if (label) {
+            label.textContent = text
+        } else {
+            toggle.textContent = text
+        }
     }
 }
 
@@ -177,7 +189,7 @@ async function handleLogin(event) {
     setSession(data.token, user)
     setStatus(status, "Login successful. Redirecting...", "success")
     window.setTimeout(() => {
-        window.location.href = "/gallery.html"
+        window.location.href = isAdmin(user) ? "/dashboard.html" : "/gallery.html"
     }, 500)
 }
 
@@ -210,37 +222,6 @@ async function handleRegister(event) {
     }, 700)
 }
 
-function renderPagination(pagination) {
-    const container = document.getElementById("pagination")
-    if (!container || !pagination) {
-        return
-    }
-
-    container.innerHTML = ""
-
-    const summary = document.createElement("span")
-    summary.className = "pagination-summary"
-    summary.textContent = `Page ${pagination.page} of ${pagination.totalPages || 1}`
-    container.appendChild(summary)
-
-    const prev = document.createElement("button")
-    prev.type = "button"
-    prev.className = "btn btn-secondary"
-    prev.textContent = "Previous"
-    prev.disabled = pagination.page <= 1
-    prev.addEventListener("click", () => loadImages(pagination.page - 1, currentQuery))
-
-    const next = document.createElement("button")
-    next.type = "button"
-    next.className = "btn btn-primary"
-    next.textContent = "Next"
-    next.disabled = pagination.page >= pagination.totalPages
-    next.addEventListener("click", () => loadImages(pagination.page + 1, currentQuery))
-
-    container.appendChild(prev)
-    container.appendChild(next)
-}
-
 function renderCommentList(comments = []) {
     if (!comments.length) {
         return '<div class="empty-state">No comments yet.</div>'
@@ -263,10 +244,212 @@ function renderRatingList(ratings = []) {
     }).join("")
 }
 
+function getImageFallback(imageId = 1) {
+    const fallbacks = [
+        "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800&q=80",
+        "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&q=80",
+        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80",
+        "https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=800&q=80"
+    ]
+
+    return fallbacks[Math.abs(Number(imageId) || 0) % fallbacks.length]
+}
+
+function normalizeImageUrl(url) {
+    if (typeof url !== "string") {
+        return ""
+    }
+
+    const trimmed = url.trim()
+    if (!trimmed) {
+        return ""
+    }
+
+    if (trimmed.startsWith("/uploads/")) {
+        return `http://localhost:3000${trimmed}`
+    }
+
+    if (trimmed.startsWith("uploads/")) {
+        return `http://localhost:3000/${trimmed}`
+    }
+
+    try {
+        const parsed = new URL(trimmed)
+        if (parsed.pathname.startsWith("/uploads/")) {
+            return `http://localhost:3000${parsed.pathname}`
+        }
+    } catch {
+        return trimmed
+    }
+
+    return trimmed
+}
+
+function resolveCardImageUrl(image) {
+    const rawUrl = image && (
+        image.image_url ||
+        image.url ||
+        image.imageUrl
+    )
+    const normalized = normalizeImageUrl(rawUrl)
+    return normalized || getImageFallback(image && image.id)
+}
+
+function getModalLikeButton(modal) {
+    return modal?.querySelector("[data-like-button]")
+}
+
+function getGalleryModal() {
+    return document.getElementById("galleryModal")
+}
+
+function setModalVisible(modal, visible) {
+    if (!modal) {
+        return
+    }
+
+    modal.classList.toggle("hidden", !visible)
+    modal.setAttribute("aria-hidden", visible ? "false" : "true")
+}
+
+function updateModalAverage(modal, ratings = []) {
+    const averageNode = modal?.querySelector("[data-modal-average]")
+    if (!averageNode) {
+        return
+    }
+
+    if (!ratings.length) {
+        averageNode.textContent = "No ratings yet"
+        return
+    }
+
+    const total = ratings.reduce((sum, rating) => sum + Number(rating.rating || 0), 0)
+    averageNode.textContent = (total / ratings.length).toFixed(1)
+}
+
+function renderModalComments(modal, comments = []) {
+    const list = modal?.querySelector("[data-modal-comments]")
+    if (!list) {
+        return
+    }
+
+    list.innerHTML = renderCommentList(comments)
+}
+
+async function openGalleryModal(image, adminMode = false) {
+    const modal = getGalleryModal()
+    if (!modal || !image) {
+        return
+    }
+
+    galleryState.activeImageId = image.id
+    modal.dataset.imageId = String(image.id)
+    modal.dataset.adminMode = adminMode ? "true" : "false"
+
+    const imageNode = modal.querySelector("[data-modal-image]")
+    const titleNode = modal.querySelector("[data-modal-title]")
+    const captionNode = modal.querySelector("[data-modal-caption]")
+    const locationNode = modal.querySelector("[data-modal-location]")
+    const uploaderNode = modal.querySelector("[data-modal-uploader]")
+    const deleteButton = modal.querySelector("[data-modal-delete]")
+
+    if (imageNode) {
+        imageNode.src = resolveCardImageUrl(image)
+        imageNode.alt = image.title || "Image"
+    }
+
+    if (titleNode) {
+        titleNode.textContent = image.title || "Untitled"
+    }
+
+    if (captionNode) {
+        captionNode.textContent = image.caption || "No caption provided."
+    }
+
+    if (locationNode) {
+        locationNode.textContent = image.location || "Unknown"
+    }
+
+    if (uploaderNode) {
+        uploaderNode.textContent = image.uploader || "Unknown"
+    }
+
+    if (deleteButton) {
+        deleteButton.classList.toggle("hidden", !adminMode)
+    }
+
+    const likeButton = getModalLikeButton(modal)
+    if (likeButton) {
+        likeButton.dataset.liked = "false"
+        likeButton.textContent = `❤️ ${Number(image.like_count || 0)}`
+    }
+
+    renderModalComments(modal, image.comments || [])
+    updateModalAverage(modal, Array.isArray(image.ratings) ? image.ratings : [])
+    setModalVisible(modal, true)
+
+    await hydrateLikes(modal, image.id, image.like_count || 0)
+    const ratings = await hydrateRatings(modal, image.id)
+    updateModalAverage(modal, ratings)
+}
+
+function closeGalleryModal() {
+    const modal = getGalleryModal()
+    if (!modal) {
+        return
+    }
+
+    galleryState.activeImageId = null
+    setModalVisible(modal, false)
+}
+
+function initGalleryModal() {
+    const modal = getGalleryModal()
+    if (!modal || modal.dataset.bound === "true") {
+        return
+    }
+
+    modal.dataset.bound = "true"
+
+    modal.querySelectorAll("[data-modal-close]").forEach((button) => {
+        button.addEventListener("click", closeGalleryModal)
+    })
+
+    modal.addEventListener("click", (event) => {
+        if (event.target === modal) {
+            closeGalleryModal()
+        }
+    })
+
+    getModalLikeButton(modal)?.addEventListener("click", async () => {
+        const imageId = Number(modal.dataset.imageId)
+        if (!imageId) {
+            return
+        }
+
+        await submitModalLike(imageId)
+    })
+
+    modal.querySelector("[data-modal-rating-form]")?.addEventListener("submit", submitModalRating)
+    modal.querySelector("[data-modal-comment-form]")?.addEventListener("submit", submitModalComment)
+    modal.querySelector("[data-modal-delete]")?.addEventListener("click", submitModalDelete)
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+            closeGalleryModal()
+        }
+    })
+}
+
+function getGalleryQuery() {
+    const searchForm = document.getElementById("searchForm")
+    return searchForm?.elements?.q?.value?.trim() || ""
+}
+
 async function hydrateRatings(card, imageId) {
     const target = card.querySelector("[data-ratings-list]")
     if (!target) {
-        return
+        return []
     }
 
     target.innerHTML = '<div class="empty-state">Loading ratings...</div>'
@@ -279,14 +462,18 @@ async function hydrateRatings(card, imageId) {
             throw new Error(data.error || "Failed to load ratings")
         }
 
-        target.innerHTML = renderRatingList(data.ratings || [])
+        const ratings = data.ratings || []
+        target.innerHTML = renderRatingList(ratings)
+        return ratings
     } catch (error) {
         target.innerHTML = `<div class="empty-state">${error.message}</div>`
+        return []
     }
 }
 
 async function hydrateLikes(card, imageId, fallbackCount = 0) {
     const countNodes = card.querySelectorAll("[data-like-count], [data-like-count-inline]")
+    const likeButton = card.querySelector("[data-like-button]")
     if (!countNodes.length) {
         return
     }
@@ -306,104 +493,63 @@ async function hydrateLikes(card, imageId, fallbackCount = 0) {
         countNodes.forEach((node) => {
             node.textContent = String(data.totalLikes || 0)
         })
+
+        if (likeButton) {
+            const liked = Boolean(data.likedByUser)
+            const total = Number(data.totalLikes || 0)
+            likeButton.dataset.liked = liked ? "true" : "false"
+            likeButton.textContent = `${liked ? "💙" : "❤️"} ${total}`
+        }
     } catch {
         // keep fallback count
     }
 }
 
-function createCard(image, { adminMode = false } = {}) {
+function createCard(image, index, { adminMode = false } = {}) {
     const card = document.createElement("article")
-    card.className = "photo-card"
+    card.className = "photo-card card"
+    card.dataset.imageId = String(image.id)
 
-    const averageRating = image.average_rating === null || image.average_rating === undefined
-        ? "No ratings yet"
-        : Number(image.average_rating).toFixed(1)
+    const finalUrl = resolveCardImageUrl(image)
+    const imageLabel = index ? `Image ${index}` : "Image"
 
     card.innerHTML = `
-        <img class="photo-card__image" src="${image.image_url}" alt="${image.title || "Image"}">
+        <img class="card-img" src="${finalUrl}" alt="${image.title || "Image"}" onerror="this.onerror=null;this.src='${getImageFallback(image.id)}';">
         <div class="photo-card__body">
-            <div class="card-title-row">
-                <div>
-                    <h3 class="photo-card__title">${image.title || "Untitled"}</h3>
-                    <p class="photo-card__caption">${image.caption || "No caption provided."}</p>
-                </div>
-                ${adminMode ? '<button type="button" class="delete-button" data-delete-button>Delete</button>' : ""}
-            </div>
-
+            <span class="photo-card__index">${imageLabel}</span>
+            <h3 class="photo-card__title">${image.title || "Untitled"}</h3>
+            <p class="photo-card__caption">${image.caption || "No caption provided."}</p>
             <div class="meta-grid">
                 <div class="meta-item"><strong>Location</strong>${image.location || "Unknown"}</div>
                 <div class="meta-item"><strong>People</strong>${image.people_present || "None"}</div>
                 <div class="meta-item"><strong>Uploader</strong>${image.uploader || "Unknown"}</div>
                 <div class="meta-item"><strong>Likes</strong><span data-like-count>${Number(image.like_count || 0)}</span></div>
             </div>
-
-            <div class="stats-row">
-                <span class="chip">Average rating: ${averageRating}</span>
-                <span class="chip">Likes total: <span data-like-count-inline>${Number(image.like_count || 0)}</span></span>
-            </div>
-
-            <div class="action-row">
-                <form class="inline-form" data-rating-form>
-                    <input type="number" name="rating" min="1" max="5" placeholder="1-5" required>
-                    <button type="submit">Rate</button>
-                </form>
-
-                <form class="inline-form" data-comment-form>
-                    <input type="text" name="comment" placeholder="Add a comment" required>
-                    <button type="submit">Comment</button>
-                </form>
-
-                <button type="button" class="like-button" data-like-button>Like ❤️</button>
-            </div>
-
-            <div class="list-block">
-                <h4>Ratings</h4>
-                <div class="list-items" data-ratings-list></div>
-            </div>
-
-            <div class="list-block">
-                <h4>Comments</h4>
-                <div class="list-items">${renderCommentList(image.comments || [])}</div>
-            </div>
         </div>
     `
 
-    const ratingForm = card.querySelector("[data-rating-form]")
-    ratingForm?.addEventListener("submit", (event) => submitRating(event, image.id))
-
-    const commentForm = card.querySelector("[data-comment-form]")
-    commentForm?.addEventListener("submit", (event) => submitComment(event, image.id))
-
-    const likeButton = card.querySelector("[data-like-button]")
-    likeButton?.addEventListener("click", () => submitLike(image.id))
-
-    const deleteButton = card.querySelector("[data-delete-button]")
-    deleteButton?.addEventListener("click", () => deleteImage(image.id, card))
-
-    hydrateRatings(card, image.id)
-    hydrateLikes(card, image.id, image.like_count || 0)
+    card.addEventListener("click", (event) => {
+        openGalleryModal(image, adminMode)
+    })
 
     return card
 }
 
-async function loadImages(page = 1, query = "") {
+async function renderGallery(query = getGalleryQuery()) {
     const grid = document.getElementById("galleryGrid")
     const status = document.getElementById("galleryStatus") || document.getElementById("dashboardStatus")
-    const pagination = document.getElementById("pagination")
 
     if (!grid) {
         return
     }
 
-    currentPage = page
-    currentQuery = query
-    grid.innerHTML = '<div class="empty-state">Loading gallery...</div>'
+    grid.innerHTML = ""
     setStatus(status, "")
 
     try {
         const endpoint = query
-            ? `${API}/images/search?q=${encodeURIComponent(query)}&page=${page}&limit=${PAGE_SIZE}`
-            : `${API}/images?page=${page}&limit=${PAGE_SIZE}`
+            ? `${API}/images/search?q=${encodeURIComponent(query)}`
+            : `${API}/images`
 
         const response = await apiFetch(endpoint)
         const data = await response.json()
@@ -412,33 +558,116 @@ async function loadImages(page = 1, query = "") {
             throw new Error(data.error || "Failed to load images")
         }
 
-        const images = data.images || []
+        const apiImages = Array.isArray(data.images) ? data.images : []
+        let imagesToShow = apiImages.map((image) => normalizeGalleryImage(image)).filter(Boolean)
+        imagesToShow = imagesToShow.slice(0, 4) // Only display 4 images as requested
+
+        galleryState.images = imagesToShow
         grid.innerHTML = ""
 
-        if (!images.length) {
-            grid.innerHTML = '<div class="empty-state">No images found.</div>'
-            renderPagination(data.pagination)
+        const adminMode = document.body.dataset.page === "dashboard"
+        if (!imagesToShow.length) {
+            grid.innerHTML = '<div class="empty-state">No photos found.</div>'
             return
         }
 
-        const adminMode = document.body.dataset.page === "dashboard"
-        images.forEach((image) => {
-            grid.appendChild(createCard(image, { adminMode }))
+        imagesToShow.forEach((image, index) => {
+            grid.appendChild(createCard(image, index + 1, { adminMode }))
         })
-
-        renderPagination(data.pagination)
     } catch (error) {
-        grid.innerHTML = `<div class="empty-state">${error.message}</div>`
-        if (pagination) {
-            pagination.innerHTML = ""
+        const adminMode = document.body.dataset.page === "dashboard"
+        const fallbackImages = galleryState.images.length ? galleryState.images : []
+
+        grid.innerHTML = ""
+
+        if (fallbackImages.length) {
+            fallbackImages.forEach((image, index) => {
+                grid.appendChild(createCard(image, index + 1, { adminMode }))
+            })
+        } else {
+            grid.innerHTML = '<div class="empty-state">No photos available right now.</div>'
         }
-        setStatus(status, error.message, "error")
+
+        setStatus(status, error.message || "Failed to load images", "error")
     }
 }
 
-async function submitRating(event, imageId) {
+function normalizeGalleryImage(image) {
+    if (!image || typeof image !== "object") {
+        return null
+    }
+
+    const id = Number(image.id)
+    const safeId = Number.isFinite(id) ? id : Date.now()
+
+    return {
+        ...image,
+        id: safeId,
+        title: image.title || "Untitled",
+        caption: image.caption || "No caption provided.",
+        location: image.location || "Unknown",
+        people_present: image.people_present || "None",
+        image_url: image.image_url || image.url || image.imageUrl || getImageFallback(safeId),
+        url: image.url || image.image_url || image.imageUrl || getImageFallback(safeId)
+    }
+}
+
+async function submitModalLike(imageId) {
+    const modal = getGalleryModal()
+    if (!modal) {
+        return
+    }
+
+    const button = getModalLikeButton(modal)
+    const liked = button?.dataset.liked === "true"
+    const method = liked ? "DELETE" : "POST"
+    const endpoint = liked ? `${API}/likes/${imageId}` : `${API}/likes`
+
+    const response = await apiFetch(endpoint, method === "POST"
+        ? {
+            method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image_id: imageId })
+        }
+        : { method }
+    )
+
+    const data = await response.json()
+    if (!response.ok) {
+        await hydrateLikes(modal, imageId)
+        alert(data.error || "Failed to update like")
+        return
+    }
+
+    const countNodes = modal.querySelectorAll("[data-like-count], [data-like-count-inline]")
+    const current = Number(modal.querySelector("[data-like-count]")?.textContent || 0)
+    const next = liked ? Math.max(0, current - 1) : current + 1
+
+    countNodes.forEach((node) => {
+        node.textContent = String(next)
+    })
+
+    if (button) {
+        const nextLiked = !liked
+        button.dataset.liked = nextLiked ? "true" : "false"
+        button.textContent = `${nextLiked ? "💙" : "❤️"} ${next}`
+    }
+
+    const activeImage = galleryState.images.find((item) => Number(item.id) === Number(imageId))
+    if (activeImage) {
+        activeImage.like_count = next
+    }
+
+    document.querySelectorAll(`[data-image-id="${imageId}"] [data-like-count]`).forEach((node) => {
+        node.textContent = String(next)
+    })
+}
+
+async function submitModalRating(event) {
     event.preventDefault()
     const form = event.currentTarget
+    const modal = form.closest("#galleryModal")
+    const imageId = Number(modal?.dataset.imageId)
     const value = Number(form.rating.value)
 
     const response = await apiFetch(`${API}/ratings`, {
@@ -454,12 +683,15 @@ async function submitRating(event, imageId) {
     }
 
     form.reset()
-    loadImages(currentPage, currentQuery)
+    const ratings = await hydrateRatings(modal, imageId)
+    updateModalAverage(modal, ratings)
 }
 
-async function submitComment(event, imageId) {
+async function submitModalComment(event) {
     event.preventDefault()
     const form = event.currentTarget
+    const modal = form.closest("#galleryModal")
+    const imageId = Number(modal?.dataset.imageId)
     const comment = form.comment.value.trim()
 
     const response = await apiFetch(`${API}/comments`, {
@@ -475,27 +707,29 @@ async function submitComment(event, imageId) {
     }
 
     form.reset()
-    loadImages(currentPage, currentQuery)
-}
 
-async function submitLike(imageId) {
-    const response = await apiFetch(`${API}/likes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image_id: imageId })
-    })
+    const list = modal?.querySelector("[data-modal-comments]")
+    if (list && data.comment) {
+        const user = getUser()
+        const author = user ? `${user.email} (${user.role})` : `User ${data.comment.user_id}`
+        const item = document.createElement("div")
+        item.className = "list-item"
+        item.innerHTML = `<strong>${author}:</strong> ${data.comment.comment}`
 
-    const data = await response.json()
-    if (!response.ok) {
-        alert(data.error || "Failed to save like")
-        return
+        const empty = list.querySelector(".empty-state")
+        if (empty) {
+            empty.remove()
+        }
+
+        list.prepend(item)
     }
-
-    loadImages(currentPage, currentQuery)
 }
 
-async function deleteImage(imageId, card) {
-    if (!window.confirm("Delete this image?")) {
+async function submitModalDelete() {
+    const modal = getGalleryModal()
+    const imageId = Number(modal?.dataset.imageId)
+
+    if (!imageId || !window.confirm("Delete this image?")) {
         return
     }
 
@@ -509,7 +743,8 @@ async function deleteImage(imageId, card) {
         return
     }
 
-    card.remove()
+    closeGalleryModal()
+    renderGallery()
 }
 
 function bindSearch() {
@@ -521,12 +756,12 @@ function bindSearch() {
     searchForm.addEventListener("submit", (event) => {
         event.preventDefault()
         const query = searchForm.elements.q.value.trim()
-        loadImages(1, query)
+        renderGallery(query)
     })
 
     document.getElementById("clearSearch")?.addEventListener("click", () => {
         searchForm.reset()
-        loadImages(1, "")
+        renderGallery("")
     })
 }
 
@@ -579,7 +814,7 @@ function bindUploadForm() {
 
         uploadForm.reset()
         setStatus(status, "Image uploaded successfully.", "success")
-        loadImages(1, currentQuery)
+        renderGallery()
     })
 }
 
@@ -607,7 +842,8 @@ function init() {
     if (page === "gallery" || page === "dashboard") {
         bindSearch()
         bindUploadForm()
-        loadImages(1, "")
+        initGalleryModal()
+        renderGallery()
         return
     }
 

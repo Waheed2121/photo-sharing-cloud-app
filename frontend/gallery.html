@@ -27,25 +27,78 @@
         </div>
     </header>
 
-    <main class="page-shell">
-        <section class="page-header">
-            <div>
+    <main class="page-shell gallery-page">
+        <section class="gallery-header hero-card">
+            <div class="gallery-title">
                 <span class="eyebrow">Gallery</span>
-                <h1>Explore all photos</h1>
-                <p>View images, comment, rate, and like your favorites.</p>
+                <h1>Discover photos with a clean editorial flow.</h1>
             </div>
 
-            <form id="searchForm" class="search-bar">
-                <input type="text" name="q" placeholder="Search by title, caption, or location">
-                <button type="submit" class="btn btn-primary">Search</button>
-                <button type="button" id="clearSearch" class="btn btn-secondary">Clear</button>
+            <form id="searchForm" class="gallery-toolbar" autocomplete="off">
+                <label class="gallery-search-field">
+                    <span>Search the gallery</span>
+                    <input type="text" name="q" placeholder="Search by title, caption, or location">
+                </label>
+                <div class="gallery-toolbar-actions">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                    <button type="button" id="clearSearch" class="btn btn-secondary">Clear</button>
+                </div>
             </form>
         </section>
 
-        <div id="galleryStatus" class="status-text"></div>
-        <section id="galleryGrid" class="card-grid"></section>
-        <section id="pagination" class="pagination"></section>
+        <div id="galleryStatus" class="status-text gallery-status"></div>
+        <section id="galleryGrid" class="card-grid gallery-grid"></section>
     </main>
+
+    <div id="galleryModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-backdrop" data-modal-close></div>
+        <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="galleryModalTitle">
+            <button type="button" class="modal-close" data-modal-close aria-label="Close modal">×</button>
+            <div class="modal-media">
+                <img data-modal-image class="modal-image" src="" alt="">
+            </div>
+            <div class="modal-body">
+                <div class="card-title-row">
+                    <div>
+                        <h3 id="galleryModalTitle" class="photo-card__title" data-modal-title></h3>
+                        <p class="photo-card__caption" data-modal-caption></p>
+                    </div>
+                    <button type="button" class="delete-button hidden" data-modal-delete>Delete</button>
+                </div>
+
+                <div class="meta-grid">
+                    <div class="meta-item"><strong>Location</strong><span data-modal-location>Unknown</span></div>
+                    <div class="meta-item"><strong>Uploader</strong><span data-modal-uploader>Unknown</span></div>
+                    <div class="meta-item"><strong>Likes</strong><span data-like-count>0</span></div>
+                    <div class="meta-item"><strong>Average rating</strong><span data-modal-average>No ratings yet</span></div>
+                </div>
+
+                <div class="action-row modal-actions">
+                    <button type="button" class="like-button" data-like-button data-liked="false">❤️ 0</button>
+                </div>
+
+                <form class="inline-form modal-form" data-modal-rating-form>
+                    <input type="number" name="rating" min="1" max="5" placeholder="1-5" required>
+                    <button type="submit">Rate</button>
+                </form>
+
+                <form class="inline-form modal-form" data-modal-comment-form>
+                    <input type="text" name="comment" placeholder="Add a comment" required>
+                    <button type="submit">Comment</button>
+                </form>
+
+                <div class="list-block">
+                    <h4>Comments</h4>
+                    <div class="list-items" data-modal-comments></div>
+                </div>
+
+                <div class="list-block">
+                    <h4>Ratings</h4>
+                    <div class="list-items" data-ratings-list></div>
+                </div>
+            </div>
+        </section>
+    </div>
 
     <script src="/script.js"></script>
 </body>

@@ -1,0 +1,48 @@
+--- frontend/style.css
++++ frontend/style.css
+@@ -719,20 +719,19 @@
+     }
+ }
+ 
+-.gallery-grid {
++.gallery-container {
++    max-width: 1200px;
++    margin: 0 auto;
++    padding: 20px;
++}
++
++.gallery-grid {
+     display: grid;
+-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+-    gap: 20px;
++    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
++    gap: 24px;
+     width: 100%;
+ }
+ 
+-.gallery-container {
+-    max-width: 1200px;
+-    margin: 0 auto;
+-    padding: 20px;
+-}
+-
+-.card img,
+-.photo-card__image {
+-    width: 100%;
+-    height: 220px;
+-    object-fit: cover;
+-    display: block;
++.card {
++    background: var(--card-bg);
++    border-radius: 16px;
++    overflow: hidden;
++    display: flex;
++    flex-direction: column;
++}
++
++.card-img {
++    width: 100%;
++    height: 220px;
++    object-fit: cover;
++    display: block;
++}

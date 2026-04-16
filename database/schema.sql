@@ -1,5 +1,5 @@
 -- USERS TABLE
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
@@ -8,7 +8,7 @@ CREATE TABLE users (
 );
 
 -- IMAGES TABLE
-CREATE TABLE images (
+CREATE TABLE IF NOT EXISTS images (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255),
     caption TEXT,
@@ -20,7 +20,7 @@ CREATE TABLE images (
 );
 
 -- COMMENTS TABLE
-CREATE TABLE comments (
+CREATE TABLE IF NOT EXISTS comments (
     id SERIAL PRIMARY KEY,
     image_id INTEGER REFERENCES images(id),
     user_id INTEGER REFERENCES users(id),
@@ -29,16 +29,17 @@ CREATE TABLE comments (
 );
 
 -- RATINGS TABLE
-CREATE TABLE ratings (
+CREATE TABLE IF NOT EXISTS ratings (
     id SERIAL PRIMARY KEY,
     image_id INTEGER REFERENCES images(id),
     user_id INTEGER REFERENCES users(id),
     rating INTEGER CHECK (rating >= 1 AND rating <= 5),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (image_id, user_id)
 );
 
 -- LIKES TABLE
-CREATE TABLE likes (
+CREATE TABLE IF NOT EXISTS likes (
     id SERIAL PRIMARY KEY,
     image_id INTEGER REFERENCES images(id) ON DELETE CASCADE,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,

@@ -19,15 +19,19 @@ exports.addRating = async (req, res) => {
         const result = await pool.query(
             `INSERT INTO ratings (image_id, user_id, rating)
              VALUES ($1, $2, $3)
+             ON CONFLICT (image_id, user_id)
+             DO UPDATE
+             SET rating = EXCLUDED.rating,
+                 created_at = CURRENT_TIMESTAMP
              RETURNING *`,
             [image_id, user_id, rating]
         )
 
-        res.status(201).json({
+        res.status(200).json({
             message: "Rating added successfully",
             rating: result.rows[0]
         })
-        invalidateByPrefix(`ratings:image:${image_id}:`)
+        invalidateByPrefix(`ratings:image:${image_id}`)
         invalidateByPrefix("images:")
 
     } catch (error) {

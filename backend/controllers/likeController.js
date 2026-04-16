@@ -17,7 +17,7 @@ exports.addLike = async (req, res) => {
             [image_id, user_id]
         )
 
-        invalidateByPrefix(`likes:image:${image_id}:`)
+        invalidateByPrefix(`likes:image:${image_id}`)
         invalidateByPrefix("images:")
 
         res.status(201).json({
@@ -33,11 +33,43 @@ exports.addLike = async (req, res) => {
     }
 }
 
+exports.removeLike = async (req, res) => {
+    try {
+        const { imageId } = req.params
+        const user_id = req.user && req.user.id
+
+        if (!imageId || !user_id) {
+            return res.status(400).json({ error: "imageId is required" })
+        }
+
+        const result = await pool.query(
+            `DELETE FROM likes
+             WHERE image_id = $1
+               AND user_id = $2
+             RETURNING *`,
+            [imageId, user_id]
+        )
+
+        invalidateByPrefix(`likes:image:${imageId}`)
+        invalidateByPrefix("images:")
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Like not found" })
+        }
+
+        res.json({ message: "Like removed successfully" })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: "Database error: " + error.message })
+    }
+}
+
 exports.getLikesByImage = async (req, res) => {
     const { imageId } = req.params
+    const user_id = req.user && req.user.id
 
     try {
-        const cacheKey = `likes:image:${imageId}`
+        const cacheKey = `likes:image:${imageId}:user:${user_id || 0}`
         const cached = getCache(cacheKey)
         if (cached) {
             return res.json(cached)
@@ -60,7 +92,8 @@ exports.getLikesByImage = async (req, res) => {
 
         const payload = {
             likes: result.rows,
-            totalLikes: result.rows.length
+            totalLikes: result.rows.length,
+            likedByUser: user_id ? result.rows.some((like) => Number(like.user_id) === Number(user_id)) : false
         }
         setCache(cacheKey, payload)
         res.json(payload)
