@@ -481,6 +481,16 @@ p {
     padding: 0.72rem;
     border-radius: 12px;
     background: var(--chip);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.meta-value {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
 }
 
 .meta-item strong,
@@ -646,13 +656,13 @@ p {
 
 .dashboard-layout {
     display: grid;
-    grid-template-columns: minmax(340px, 390px) minmax(0, 1fr);
-    gap: 1rem;
+    grid-template-columns: 1fr;
+    gap: 2rem;
     align-items: start;
 }
 
 .panel-card {
-    padding: 1.1rem;
+    padding: 2rem;
 }
 
 .panel-card h2 {

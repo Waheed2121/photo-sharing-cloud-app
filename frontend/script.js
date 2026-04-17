@@ -520,10 +520,10 @@ function createCard(image, index, { adminMode = false } = {}) {
             <h3 class="photo-card__title">${image.title || "Untitled"}</h3>
             <p class="photo-card__caption">${image.caption || "No caption provided."}</p>
             <div class="meta-grid">
-                <div class="meta-item"><strong>Location</strong>${image.location || "Unknown"}</div>
-                <div class="meta-item"><strong>People</strong>${image.people_present || "None"}</div>
-                <div class="meta-item"><strong>Uploader</strong>${image.uploader || "Unknown"}</div>
-                <div class="meta-item"><strong>Likes</strong><span data-like-count>${Number(image.like_count || 0)}</span></div>
+                <div class="meta-item"><strong>Location</strong><span class="meta-value" title="${image.location || "Unknown"}">${image.location || "Unknown"}</span></div>
+                <div class="meta-item"><strong>People</strong><span class="meta-value" title="${image.people_present || "None"}">${image.people_present || "None"}</span></div>
+                <div class="meta-item"><strong>Uploader</strong><span class="meta-value" title="${image.uploader || "Unknown"}">${image.uploader || "Unknown"}</span></div>
+                <div class="meta-item"><strong>Likes</strong><span class="meta-value" data-like-count>${Number(image.like_count || 0)}</span></div>
             </div>
         </div>
     `
@@ -708,20 +708,35 @@ async function submitModalComment(event) {
 
     form.reset()
 
-    const list = modal?.querySelector("[data-modal-comments]")
-    if (list && data.comment) {
-        const user = getUser()
-        const author = user ? `${user.email} (${user.role})` : `User ${data.comment.user_id}`
-        const item = document.createElement("div")
-        item.className = "list-item"
-        item.innerHTML = `<strong>${author}:</strong> ${data.comment.comment}`
+    try {
+        const listRes = await apiFetch(`${API}/comments/${imageId}`)
+        const listData = await listRes.json()
+        if (listRes.ok && listData.comments) {
+            renderModalComments(modal, listData.comments)
+            const activeImage = galleryState.images.find(img => img.id === imageId)
+            if (activeImage) {
+                activeImage.comments = listData.comments
+            }
+        } else {
+            // Fallback prepend if re-fetch fails
+            const list = modal?.querySelector("[data-modal-comments]")
+            if (list && data.comment) {
+                const user = getUser()
+                const author = user ? `${user.email} (${user.role})` : `User ${data.comment.user_id}`
+                const item = document.createElement("div")
+                item.className = "list-item"
+                item.innerHTML = `<strong>${author}:</strong> ${data.comment.comment}`
 
-        const empty = list.querySelector(".empty-state")
-        if (empty) {
-            empty.remove()
+                const empty = list.querySelector(".empty-state")
+                if (empty) {
+                    empty.remove()
+                }
+
+                list.prepend(item)
+            }
         }
-
-        list.prepend(item)
+    } catch (err) {
+        console.error(err)
     }
 }
 
